@@ -1,0 +1,19 @@
+{
+  "name": "avacloud-demo-node-backend",
+  "version": "1.0.0",
+  "description": "Demo for the AVACloud client with a Node backend",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js"
+  },
+  "author": "Georg Dangl",
+  "license": "MIT",
+  "dependencies": {
+    "@dangl/avacloud-client-node": "1.4.2",
+    "express": "^4.16.4",
+    "express-formidable": "^1.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.10"
+  }
+}

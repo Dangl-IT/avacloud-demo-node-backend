@@ -30,6 +30,7 @@ app.post('/upload-gaeb', function (req, res) {
 
     demo.returnAvaProject(clientId, clientSecret, gaebFile)
         .then(function (avaProject) {
+            res.set({ 'content-type': 'application/json; charset=utf-8' });
             res.write(JSON.stringify(avaProject, null, 2));
             res.end();
         })

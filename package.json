@@ -9,7 +9,7 @@
   "author": "Georg Dangl",
   "license": "MIT",
   "dependencies": {
-    "@dangl/avacloud-client-node": "1.9.0",
+    "@dangl/avacloud-client-node": "1.31.0",
     "express": "^4.19.2",
     "express-formidable": "^1.2.0"
   },

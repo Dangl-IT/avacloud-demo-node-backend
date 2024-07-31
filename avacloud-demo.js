@@ -1,4 +1,3 @@
-var request = require('request');
 var avaCloudClient = require('@dangl/avacloud-client-node');
 var fs = require('fs');
 
@@ -6,7 +5,7 @@ var fs = require('fs');
 const danglIdentityTokenEndpoint = 'https://identity.dangl-it.com/connect/token';
 
 async function returnAvaProject(clientId, clientSecret, gaebFile) {
-    const accessToken = await getAccessToken(clientId, clientSecret);
+    const accessToken = await getOAuth2AccessToken(clientId, clientSecret);
     if (!accessToken) {
         return { error: 'Failed to get access token' };
     }
@@ -21,71 +20,76 @@ async function returnAvaProject(clientId, clientSecret, gaebFile) {
 }
 
 // This function retrieves the JWT Token
-async function getAccessToken(clientId, clientSecret) {
+async function getOAuth2AccessToken(
+    clientId,
+    clientSecret
+  ) {
     if (!clientId || !clientSecret) {
-        console.log('Please provide values for clientId and clientSecret. You can find more info in the tutorial at www.dangl-it.com or the AVACloud documenation.');
-        return null;
+      console.log(
+        "Please provide values for clientId and clientSecret. You can find more info in the tutorial at www.dangl-it.com or the AVACloud documenation."
+      );
+      throw new Error("Missing clientId or clientSecret");
     }
-    const clientCredentialsRequest = new Promise(function (resolve, reject) {
-        request.post(danglIdentityTokenEndpoint, {
-            auth: {
-                username: clientId,
-                password: clientSecret
-            },
-            body: 'grant_type=client_credentials&scope=avacloud',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        }, function (err, resp, body) {
-            if (err) {
-                console.log('Error');
-                reject(err);
-            } else {
-                resolve(body);
-            }
-        });
-    });
     try {
-        const clientCredentialsResult = await clientCredentialsRequest;
-        accessToken = JSON.parse(clientCredentialsResult)['access_token'];
-        if (!accessToken) {
-            console.log(clientCredentialsResult);
-            console.log('Failed to obtain an access token. Have you read the documentation and set up your OAuth2 client?');
-            return null;
-        }
-        return accessToken;
-    } catch (e) {
-        console.log(e);
-        console.log('Failed to obtain an access token. Have you read the documentation and set up your OAuth2 client?');
-        return null;
+      const tokenResponseRaw = await fetch(danglIdentityTokenEndpoint, {
+        method: "POST",
+        body: "grant_type=client_credentials&scope=avacloud",
+        headers: {
+          Authorization: "Basic " + btoa(clientId + ":" + clientSecret),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+      if (tokenResponseRaw.status !== 200) {
+        throw new Error(
+          "Failed to obtain an access token, status code: " +
+            tokenResponseRaw.status
+        );
+      }
+  
+      const jsonResponse = await tokenResponseRaw.json();
+      const accessToken = jsonResponse["access_token"];
+      if (!accessToken) {
+        console.log(
+          "Failed to obtain an access token. Have you read the documentation and set up your OAuth2 client?"
+        );
+      }
+  
+      return accessToken;
+    } catch {
+      console.log(
+        "Failed to obtain an access token. Have you read the documentation and set up your OAuth2 client?"
+      );
+  
+      throw new Error("Failed to obtain an access token");
     }
-}
+  }
 
 // This function sends the GAEB file to AVACloud and returns the project model
 async function getAvaProject(accessToken, gaebFile) {
     const apiClient = new avaCloudClient.GaebConversionApi();
     apiClient.accessToken = accessToken;
 
-    // Files sent to the Node backend are saved as temporary files,
-    // here it's being read again
-    var gaebFileBlob = fs.readFileSync(gaebFile.path);
+    var gaebFileParam = getGaebFile(gaebFile)
 
-    var opts = {
-        value: gaebFileBlob,
-        options: {
-            filename: gaebFile.name,
-            contentType: 'application/octet-stream'
-        }
-    };
+    var avaConversionResult = await apiClient.gaebConversionConvertToAva(gaebFileParam);
 
-    var avaConversionResult = await apiClient.gaebConversionConvertToAva(opts);
-
-    if (avaConversionResult.statusCode < 200 || avaConversionResult.statusCode >= 300) {
+    if (avaConversionResult.status < 200 || avaConversionResult.status >= 300) {
         console.log('Failed to convert the GAEB input file');
         return null;
     } else {
-        return avaConversionResult.body;
+        return avaConversionResult.result;
     }
+}
+
+function getGaebFile(gaebFile) {
+  // Files sent to the Node backend are saved as temporary files,
+  // here it's being read again
+  const gaebFileBuffer = fs.readFileSync(gaebFile.path);
+  const fileParam = {
+    data: new Blob([gaebFileBuffer]),
+    fileName: gaebFile.name
+  };
+  return fileParam;
 }
 
 module.exports = {

@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "@dangl/avacloud-client-node": "1.31.0",
-    "express": "^4.21.0",
+    "express": "^4.21.2",
     "express-formidable": "^1.2.0"
   },
   "devDependencies": {
